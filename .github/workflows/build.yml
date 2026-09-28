@@ -5,67 +5,74 @@ on:
   push:
     branches:
       - main
-      - master
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Projeyi indir
+      - name: Kodu indir
         uses: actions/checkout@v4
 
-      - name: JDK 17
+      - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Gradle 8.7
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.7'
+      - name: Android projesini ZIP'ten çıkar
+        run: |
+          echo "=== ZIP DOSYASI ==="
+          ls -la
+
+          if [ ! -f "omnivideo-ai-fixed.zip" ]; then
+            echo "HATA: omnivideo-ai-fixed.zip bulunamadı!"
+            exit 1
+          fi
+
+          mkdir -p android-project
+          unzip -q "omnivideo-ai-fixed.zip" -d android-project
+
+          echo "=== ZIP ICERIGI ==="
+          find android-project -maxdepth 5 -type f | sort
 
       - name: Android projesini bul
-        shell: bash
         run: |
           echo "=== ANDROID PROJESI ARANIYOR ==="
 
-          SETTINGS=$(find . -type f \( \
+          SETTINGS=$(find android-project -type f \( \
             -name "settings.gradle" -o \
             -name "settings.gradle.kts" \
           \) | head -n 1)
 
           if [ -z "$SETTINGS" ]; then
-            echo "HATA: settings.gradle bulunamadı!"
-            echo "=== DOSYALAR ==="
-            find . -maxdepth 5 -type f | sort
+            echo "HATA: ZIP'in içinde settings.gradle bulunamadı!"
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$SETTINGS")
 
-          echo "Bulunan proje:"
-          echo "$PROJECT_DIR"
+          echo "settings dosyası: $SETTINGS"
+          echo "PROJE KLASORU: $PROJECT_DIR"
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Gradle Build
-        shell: bash
+      - name: Gradle ile APK oluştur
         run: |
           cd "$PROJECT_DIR"
 
-          echo "=== PROJE KLASÖRÜ ==="
-          pwd
-
-          echo "=== DOSYALAR ==="
+          echo "=== PROJE DOSYALARI ==="
           ls -la
 
-          echo "=== APK DERLEME ==="
-          gradle assembleDebug --stacktrace
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --stacktrace
+          else
+            echo "gradlew bulunamadı, sistem Gradle kullanılacak."
+            gradle assembleDebug --stacktrace
+          fi
 
       - name: APK bul
-        shell: bash
         run: |
           echo "=== APK DOSYALARI ==="
           find "$PROJECT_DIR" -type f -name "*.apk" -print
@@ -73,6 +80,7 @@ jobs:
       - name: APK yükle
         uses: actions/upload-artifact@v4
         with:
-          name: Quiz-Zone-Debug-APK
-          path: '**/build/outputs/apk/**/*.apk'
+          name: OmniVideo-AI-APK
+          path: |
+            **/build/outputs/apk/**/*.apk
           if-no-files-found: error
