@@ -25,15 +25,15 @@ jobs:
           echo "=== ZIP DOSYASI ==="
           ls -la
 
-          if [ ! -f "omnivideo-ai-fixed.zip" ]; then
-            echo "HATA: omnivideo-ai-fixed.zip bulunamadı!"
+          if [ ! -f "omnivideo-ai.zip" ]; then
+            echo "HATA: omnivideo-ai.zip bulunamadı!"
             exit 1
           fi
 
           rm -rf android-project
           mkdir -p android-project
 
-          unzip -q "omnivideo-ai-fixed.zip" -d android-project
+          unzip -q "omnivideo-ai.zip" -d android-project
 
           echo "=== ZIP ICERIGI ==="
           find android-project -maxdepth 6 -type f | sort
@@ -85,60 +85,4 @@ jobs:
 
           if [ ! -f "debug.keystore" ]; then
             echo "=== DEBUG KEYSTORE OLUŞTURULUYOR ==="
-
-            keytool -genkeypair \
-              -v \
-              -keystore debug.keystore \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "CN=Android Debug,O=Android,C=US"
-
-            echo "debug.keystore başarıyla oluşturuldu."
-          else
-            echo "debug.keystore zaten mevcut."
-          fi
-
-      - name: Proje dosyalarını kontrol et
-        run: |
-          echo "=== PROJE DOSYALARI ==="
-          cd "$PROJECT_DIR"
-          ls -la
-
-          echo "=== APP DOSYALARI ==="
-          find app -maxdepth 3 -type f | sort
-
-      - name: APK oluştur
-        run: |
-          cd "$PROJECT_DIR"
-
-          echo "=== APK BUILD BAŞLIYOR ==="
-
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew assembleDebug --stacktrace
-          else
-            echo "gradlew bulunamadı."
-            echo "Sistem Gradle kullanılacak."
-            gradle assembleDebug --stacktrace
-          fi
-
-      - name: APK dosyasını bul
-        run: |
-          echo "=== APK DOSYALARI ==="
-
-          find "$PROJECT_DIR" \
-            -type f \
-            -name "*.apk" \
-            -print
-
-      - name: APK yükle
-        uses: actions/upload-artifact@v4
-        with:
-          name: OmniVideo-AI-APK
-          path: |
-            **/build/outputs/apk/**/*.apk
-          if-no-files-found: error
+            
