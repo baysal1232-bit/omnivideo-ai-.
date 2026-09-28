@@ -30,11 +30,13 @@ jobs:
             exit 1
           fi
 
+          rm -rf android-project
           mkdir -p android-project
+
           unzip -q "omnivideo-ai-fixed.zip" -d android-project
 
           echo "=== ZIP ICERIGI ==="
-          find android-project -maxdepth 5 -type f | sort
+          find android-project -maxdepth 6 -type f | sort
 
       - name: Android projesini bul
         run: |
@@ -46,7 +48,7 @@ jobs:
           \) | head -n 1)
 
           if [ -z "$SETTINGS" ]; then
-            echo "HATA: ZIP'in içinde settings.gradle bulunamadı!"
+            echo "HATA: settings.gradle veya settings.gradle.kts bulunamadı!"
             exit 1
           fi
 
@@ -57,25 +59,81 @@ jobs:
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Gradle ile APK oluştur
+      - name: Google Services dosyasını kontrol et
+        run: |
+          echo "=== GOOGLE SERVICES ARANIYOR ==="
+
+          GOOGLE_FILE=$(find "$PROJECT_DIR" -type f -name "google-services.json" | head -n 1)
+
+          if [ -n "$GOOGLE_FILE" ]; then
+            echo "Google Services bulundu:"
+            echo "$GOOGLE_FILE"
+
+            if [ "$GOOGLE_FILE" != "$PROJECT_DIR/app/google-services.json" ]; then
+              mkdir -p "$PROJECT_DIR/app"
+              cp "$GOOGLE_FILE" "$PROJECT_DIR/app/google-services.json"
+              echo "google-services.json app klasörüne kopyalandı."
+            fi
+          else
+            echo "UYARI: google-services.json bulunamadı."
+            echo "Firebase kullanan uygulamalarda build başarısız olabilir."
+          fi
+
+      - name: Debug keystore oluştur
         run: |
           cd "$PROJECT_DIR"
 
+          if [ ! -f "debug.keystore" ]; then
+            echo "=== DEBUG KEYSTORE OLUŞTURULUYOR ==="
+
+            keytool -genkeypair \
+              -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+
+            echo "debug.keystore başarıyla oluşturuldu."
+          else
+            echo "debug.keystore zaten mevcut."
+          fi
+
+      - name: Proje dosyalarını kontrol et
+        run: |
           echo "=== PROJE DOSYALARI ==="
+          cd "$PROJECT_DIR"
           ls -la
+
+          echo "=== APP DOSYALARI ==="
+          find app -maxdepth 3 -type f | sort
+
+      - name: APK oluştur
+        run: |
+          cd "$PROJECT_DIR"
+
+          echo "=== APK BUILD BAŞLIYOR ==="
 
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
             ./gradlew assembleDebug --stacktrace
           else
-            echo "gradlew bulunamadı, sistem Gradle kullanılacak."
+            echo "gradlew bulunamadı."
+            echo "Sistem Gradle kullanılacak."
             gradle assembleDebug --stacktrace
           fi
 
-      - name: APK bul
+      - name: APK dosyasını bul
         run: |
           echo "=== APK DOSYALARI ==="
-          find "$PROJECT_DIR" -type f -name "*.apk" -print
+
+          find "$PROJECT_DIR" \
+            -type f \
+            -name "*.apk" \
+            -print
 
       - name: APK yükle
         uses: actions/upload-artifact@v4
