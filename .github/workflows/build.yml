@@ -63,10 +63,16 @@ jobs:
 
           echo "=== APK DERLEME ==="
           gradle assembleDebug --stacktrace
+
+      - name: APK bul
+        shell: bash
+        run: |
+          echo "=== APK DOSYALARI ==="
+          find "$PROJECT_DIR" -type f -name "*.apk" -print
+
       - name: APK yükle
         uses: actions/upload-artifact@v4
         with:
           name: Quiz-Zone-Debug-APK
           path: '**/build/outputs/apk/**/*.apk'
           if-no-files-found: error
-Sonra
